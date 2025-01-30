@@ -71,11 +71,14 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
   FILES
   RobotState.msg
+  Velocity.msg
 )
 
 add_service_files(
   FILES
   GetTarget.srv
+  GetGoalStats.srv
+
 )
 
 ## Generate actions in the 'action' folder
@@ -232,3 +235,8 @@ target_link_libraries(action_client ${catkin_LIBRARIES})
 add_executable(target_service src/target_service.cpp)
 add_dependencies(target_service ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(target_service ${catkin_LIBRARIES})
+
+
+add_executable(goal_stats_service src/goal_stats_service.cpp)
+add_dependencies(goal_stats_service ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(goal_stats_service ${catkin_LIBRARIES})

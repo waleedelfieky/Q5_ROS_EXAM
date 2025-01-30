@@ -5,13 +5,12 @@
 #include <assignment_2_2024/PlanningAction.h>			// auto-generated header file for the custom action messages. 	
 #include <nav_msgs/Odometry.h>					// To subscribe to /odom for real-time odometry updates. "it is a standard topic in ROS 1"
 #include <assignment_2_2024/RobotState.h>				// Custom message for publishing robot state. "we have created it inside msg directory"
+#include <assignment_2_2024/Velocity.h>				// Custom message for publishing velocity in km/h
 #include <iostream>						// to interact with user throguh UI
 /*========================================================*/
 
 //creating alias to the ActionClient using the custom service message and name it Planning Client 
 typedef actionlib::SimpleActionClient<assignment_2_2024::PlanningAction> PlanningClient;
-
-
 
 //now we have the action client and we do need to do a class that encapsulates the whole client logic
 class RobotActionClient
@@ -25,6 +24,8 @@ public:
         	ac.waitForServer();
         	//after server is successfully connected now Advertises to the topic named robot_state to publish the robot's state later
         	pub = nh.advertise<assignment_2_2024::RobotState>("robot_state", 10);
+        	// Advertise the new topic for velocity in km/h
+        	vel_pub = nh.advertise<assignment_2_2024::Velocity>("robot_velocity_kmh", 10);
         	//we will subscribe to the data comming from /odom too "RobotActionClient::odomCallbac" method would be defined in this class
         	odom_sub = nh.subscribe("/odom", 10, &RobotActionClient::odomCallback, this);
     	}
@@ -63,12 +64,22 @@ private:
     	ros::NodeHandle nh;
     	PlanningClient ac;
     	ros::Publisher pub;
+    	ros::Publisher vel_pub;
     	ros::Subscriber odom_sub;
     	assignment_2_2024::RobotState robot_state;
+    	assignment_2_2024::Velocity robot_velocity;
+    	int goals_reached = 0;
+    	int goals_cancelled = 0;
+
     	//define the done call back
     	void doneCb(const actionlib::SimpleClientGoalState &state, const assignment_2_2024::PlanningResultConstPtr &result)
     	{
         	ROS_INFO("Goal finished with state: %s", state.toString().c_str());
+        	if (state == actionlib::SimpleClientGoalState::SUCCEEDED) {
+            		goals_reached++;
+        	} else if (state == actionlib::SimpleClientGoalState::PREEMPTED) {
+            		goals_cancelled++;
+        	}
     	}
     	//define the actice call back
     	void activeCb()
@@ -81,7 +92,6 @@ private:
         	// Placeholder for feedback processing if needed
         	//ROS_INFO("Got Feedback");
         	pub.publish(robot_state);
-
     	}
     	//define the call back function
     	void odomCallback(const nav_msgs::Odometry::ConstPtr &msg)
@@ -91,6 +101,11 @@ private:
         	robot_state.vel_x = msg->twist.twist.linear.x;
         	robot_state.vel_z = msg->twist.twist.angular.z;
         	pub.publish(robot_state);
+
+        	// Convert velocity to km/h and publish
+        	robot_velocity.vx = msg->twist.twist.linear.x * 3.6;
+        	robot_velocity.vy = msg->twist.twist.linear.y * 3.6;
+        	vel_pub.publish(robot_velocity);
     	}
 };
 
@@ -141,4 +156,3 @@ int main(int argc, char **argv)
 
     	return 0;
 }
-
